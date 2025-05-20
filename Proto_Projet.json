@@ -1,0 +1,1637 @@
+[
+    {
+        "id": "335a09e1e6361a9a",
+        "type": "tab",
+        "label": "Crafty_Bot 01",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "e77e1e23.24b258",
+        "type": "inject",
+        "z": "335a09e1e6361a9a",
+        "name": "Api request",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "0.1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 110,
+        "y": 80,
+        "wires": [
+            [
+                "e4b893ca4ba622ee"
+            ]
+        ]
+    },
+    {
+        "id": "c1bf7438873a0ce3",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "Format Discord Message",
+        "func": "function formatDiscordMessage(msg) {\n    const data = msg.payload.data;\n    const serverInfo = data.server_id;\n\n    // Create an embed-friendly message\n    const embed = {\n        embeds: [{\n            title: `Server Status: ${serverInfo.server_name}`,\n            color: data.running ? 0x00FF00 : 0xFF0000, // Green if running, Red if not\n            fields: [\n                {\n                    name: \"🖥️ Server Details\",\n                    value: `\n**Server ID:** \\`${serverInfo.server_id}\\`\n**IP:** ${serverInfo.server_ip}:${data.server_port}\n**Version:** ${data.version}\n**World:** ${data.world_name}\n                    `.trim(),\n                    inline: false\n                },\n                {\n                    name: \"📊 Performance\",\n                    value: `\n**CPU Usage:** ${data.cpu}%\n**Memory:** ${data.mem} (${data.mem_percent}%)\n                    `.trim(),\n                    inline: false\n                },\n                {\n                    name: \"👥 Players\",\n                    value: `\n**Online:** ${data.online}/${data.max}\n**Players:** ${data.players === '[]' ? 'None' : data.players}\n                    `.trim(),\n                    inline: false\n                }\n            ],\n            footer: {\n                text: `Last Started: ${data.started} | Status: ${data.running ? 'RUNNING' : 'STOPPED'}`\n            }\n        }]\n    };\n\n    // Prepare the message payload for Discord webhook\n    msg.payload = embed;\n    return msg;\n}\n\nreturn formatDiscordMessage(msg);",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 80,
+        "wires": [
+            [
+                "checkMessageId"
+            ]
+        ]
+    },
+    {
+        "id": "e4b893ca4ba622ee",
+        "type": "http request",
+        "z": "335a09e1e6361a9a",
+        "name": "Get Server Stats Renny",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://minecraft.lennygodart.org/api/v2/servers/a939a792-3942-4e4b-8ade-b09f9fc0695d/stats",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [
+            {
+                "keyType": "Authorization",
+                "keyValue": "",
+                "valueType": "other",
+                "valueValue": "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJpYXQiOjE3NDcxMzM3MjUsInRva2VuX2lkIjoxfQ.xAdOX-4KxSzgHWkBs4cM9v4NjeIg77gEiUzTrc3bx_Y"
+            }
+        ],
+        "x": 340,
+        "y": 80,
+        "wires": [
+            [
+                "c1bf7438873a0ce3",
+                "fdf7722f89077243",
+                "70763df350b852b9"
+            ]
+        ]
+    },
+    {
+        "id": "checkMessageId",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "Check for Message ID",
+        "func": "let editingPaused = flow.get('editingPaused');\nif (editingPaused) {\n    node.warn('Editing is currently paused. Skipping update.');\n    return null;\n}\n\n// Abrufen der gespeicherten messageId aus dem Flow\nlet messageId = flow.get('messageId');\nnode.log(`Stored Message ID: ${messageId}`);  // Debugging: Überprüfen, ob die ID richtig abgerufen wird\n\n// Initialisierung der Components\nmsg.components = [\n    {\n        type: 1, // Action Row\n        components: []\n    }\n];\n\n// Überprüfen, ob der Footer \"RUNNING\" enthält\nif (msg.payload.embeds && msg.payload.embeds[0] && msg.payload.embeds[0].footer && msg.payload.embeds[0].footer.text && msg.payload.embeds[0].footer.text.includes(\"RUNNING\")) {\n    // Wenn der Server läuft, füge die Stop- und Neustart-Buttons hinzu\n    msg.components[0].components.push(\n        {\n            type: 2, // Button\n            label: \"Stop\", // Button-Text\n            style: 4, // Rote Farbe\n            custom_id: \"stop_server\" // Custom ID für den Button\n        },\n        {\n            type: 2, // Button\n            label: \"Neustart\", // Button-Text\n            style: 1, // Blaue Farbe\n            custom_id: \"restart_server\" // Custom ID für den Button\n        }\n    );\n} else {\n    // Wenn der Server nicht läuft, füge den Start-Button hinzu\n    msg.components[0].components.push(\n        {\n            type: 2, // Button\n            label: \"Start\", // Button-Text\n            style: 3, // Grüne Farbe\n            custom_id: \"start_server\" // Custom ID für den Button\n        }\n    );\n}\n\n// Definiere den Kanal, in dem die Nachricht gesendet wird\nmsg.channel = '1313469382696894536';  // Kanal-ID\n\n// Falls keine Interaktion, Nachricht erstellen oder bearbeiten\nif (!messageId) {\n    // Nachricht neu erstellen\n    if (!msg.payload || !msg.payload.embeds || msg.payload.embeds.length === 0) {\n        node.warn('Keine Embeds im msg.payload gefunden.');\n        return null;\n    }\n\n    msg.embeds = msg.payload.embeds;\n    msg.action = 'create';  // Nachricht erstellen\n} else {\n    // Nachricht bearbeiten\n    if (!msg.payload || !msg.payload.embeds || msg.payload.embeds.length === 0) {\n        node.warn('Keine Embeds im msg.payload für Bearbeitung gefunden.');\n        return null;\n    }\n\n    msg.message = messageId;  // Vorhandene Message-ID verwenden\n    msg.embeds = msg.payload.embeds;\n    msg.action = 'edit';  // Nachricht bearbeiten\n}\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 900,
+        "y": 80,
+        "wires": [
+            [
+                "discordMessageManager"
+            ]
+        ]
+    },
+    {
+        "id": "discordMessageManager",
+        "type": "discordMessageManager",
+        "z": "335a09e1e6361a9a",
+        "name": "Send Renny Status",
+        "channel": "1313469382696894536",
+        "token": "",
+        "x": 1110,
+        "y": 80,
+        "wires": [
+            [
+                "storeMessageId"
+            ]
+        ]
+    },
+    {
+        "id": "storeMessageId",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "Store Message ID",
+        "func": "if (msg.action === 'delete') {\n    node.log('Message deleted successfully.');\n    flow.set('messageId', null); // Nachricht-ID zurücksetzen\n    flow.set('editingPaused', false); // Bearbeitung wieder aktivieren\n}\nif (msg.action === 'create' && msg.payload && msg.payload.id) {\n    // Speichern der Message-ID\n    flow.set('messageId', msg.payload.id);\n    node.log(`Message ID saved: ${msg.payload.id}`);\n} else if (msg.action === 'edit') {\n    node.log('Message edited successfully.');\n} else {\n    node.warn('No message ID received to store.');\n}\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1310,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "426d799aea01830e",
+        "type": "inject",
+        "z": "335a09e1e6361a9a",
+        "name": "reset messageID",
+        "props": [
+            {
+                "p": "message",
+                "v": "",
+                "vt": "num"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 120,
+        "y": 40,
+        "wires": [
+            [
+                "a81bf3ef7ba64cb1"
+            ]
+        ]
+    },
+    {
+        "id": "a81bf3ef7ba64cb1",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "reset ID",
+        "func": "flow.set('messageId', null);  // Löscht MessageID\nnode.log('Message ID reset. A new message will be sent on the next run.');\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 680,
+        "y": 40,
+        "wires": [
+            [
+                "checkMessageId"
+            ]
+        ]
+    },
+    {
+        "id": "21aa4bdd45888536",
+        "type": "catch",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "scope": null,
+        "uncaught": false,
+        "x": 80,
+        "y": 120,
+        "wires": [
+            [
+                "fa402ebb41710a43"
+            ]
+        ]
+    },
+    {
+        "id": "fa402ebb41710a43",
+        "type": "debug",
+        "z": "335a09e1e6361a9a",
+        "name": "Catch Errors",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 230,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "76be9a07ef386f81",
+        "type": "inject",
+        "z": "335a09e1e6361a9a",
+        "name": "Initialize & Clear LCD",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.1",
+        "topic": "",
+        "x": 170,
+        "y": 260,
+        "wires": [
+            [
+                "04c2053d17528d94"
+            ]
+        ]
+    },
+    {
+        "id": "04c2053d17528d94",
+        "type": "exec",
+        "z": "335a09e1e6361a9a",
+        "command": "python /home/lenny/digilab/lcd/init.py",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "Run Init/Clear Script",
+        "x": 380,
+        "y": 260,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "541dca5e05f32d4d",
+        "type": "exec",
+        "z": "335a09e1e6361a9a",
+        "command": "python /home/lenny/digilab/lcd/backlight.py",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "Turning Backlight on",
+        "x": 580,
+        "y": 340,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "433debf81e017287",
+        "type": "rpi-gpio in",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "pin": "21",
+        "intype": "tri",
+        "debounce": "25",
+        "read": false,
+        "bcm": true,
+        "x": 90,
+        "y": 340,
+        "wires": [
+            [
+                "51511c389010e3ad"
+            ]
+        ]
+    },
+    {
+        "id": "51511c389010e3ad",
+        "type": "switch",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "1",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "0",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 210,
+        "y": 340,
+        "wires": [
+            [
+                "6946707de0189e47"
+            ],
+            [
+                "7fdd5f4c80e76ea5"
+            ]
+        ]
+    },
+    {
+        "id": "6946707de0189e47",
+        "type": "change",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "on",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 370,
+        "y": 320,
+        "wires": [
+            [
+                "541dca5e05f32d4d"
+            ]
+        ]
+    },
+    {
+        "id": "7fdd5f4c80e76ea5",
+        "type": "change",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "off",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 370,
+        "y": 360,
+        "wires": [
+            [
+                "541dca5e05f32d4d"
+            ]
+        ]
+    },
+    {
+        "id": "987fcee8b20b5ed9",
+        "type": "template",
+        "z": "335a09e1e6361a9a",
+        "name": "Build Write Command",
+        "field": "payload",
+        "fieldType": "msg",
+        "format": "handlebars",
+        "syntax": "mustache",
+        "template": " --line \"{{line}}\" --message \"{{payload}}\"",
+        "output": "str",
+        "x": 800,
+        "y": 160,
+        "wires": [
+            [
+                "2428814a39ee8fbd"
+            ]
+        ]
+    },
+    {
+        "id": "2428814a39ee8fbd",
+        "type": "exec",
+        "z": "335a09e1e6361a9a",
+        "command": "python /home/lenny/digilab/lcd/write.py",
+        "addpay": "payload",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "Run Write Script",
+        "x": 1000,
+        "y": 160,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "fdf7722f89077243",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "function 1",
+        "func": "msg.payload = msg.payload.data.server_id.server_name\nmsg.line = 1\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 140,
+        "wires": [
+            [
+                "987fcee8b20b5ed9"
+            ]
+        ]
+    },
+    {
+        "id": "295f222e1b11085b",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "function 2",
+        "func": "const data = msg.payload.data;\n\nconst status = data.running ? \"Started\" : \"Stopped\";\nconst online = data.online || 0;\nconst max = data.max || 20;\n\nmsg.payload = `${status}   ${online}I${max}`;\nmsg.line = 2\nmsg.topic\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 180,
+        "wires": [
+            [
+                "987fcee8b20b5ed9"
+            ]
+        ]
+    },
+    {
+        "id": "70763df350b852b9",
+        "type": "delay",
+        "z": "335a09e1e6361a9a",
+        "name": "0.5s",
+        "pauseType": "delay",
+        "timeout": "0.5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 490,
+        "y": 180,
+        "wires": [
+            [
+                "295f222e1b11085b",
+                "5574732184b54774"
+            ]
+        ]
+    },
+    {
+        "id": "5574732184b54774",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "function 3",
+        "func": "const data = msg.payload.data;\nconst online = data.online || 0;\nmsg.payload = {online};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 220,
+        "wires": [
+            [
+                "62dfb1a74bfa4f4d"
+            ]
+        ]
+    },
+    {
+        "id": "64dcd620247cb868",
+        "type": "rpi-gpio out",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "pin": "27",
+        "set": true,
+        "level": "0",
+        "freq": "50",
+        "out": "out",
+        "bcm": true,
+        "x": 1700,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "6505675046971e7d",
+        "type": "rpi-gpio out",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "pin": "18",
+        "set": true,
+        "level": "0",
+        "freq": "50",
+        "out": "out",
+        "bcm": true,
+        "x": 1700,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "6eb7e2fb1f4eabec",
+        "type": "rpi-gpio out",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "pin": "17",
+        "set": true,
+        "level": "0",
+        "freq": "50",
+        "out": "out",
+        "bcm": true,
+        "x": 1700,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "1ceefbcbc074e9ed",
+        "type": "rpi-gpio out",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "pin": "22",
+        "set": true,
+        "level": "0",
+        "freq": "50",
+        "out": "out",
+        "bcm": true,
+        "x": 1700,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "b75391e473702983",
+        "type": "rpi-gpio out",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "pin": "15",
+        "set": true,
+        "level": "0",
+        "freq": "50",
+        "out": "out",
+        "bcm": true,
+        "x": 1700,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "083abb252192009b",
+        "type": "rpi-gpio out",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "pin": "14",
+        "set": true,
+        "level": "0",
+        "freq": "50",
+        "out": "out",
+        "bcm": true,
+        "x": 1700,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "43ae502a621f2819",
+        "type": "rpi-gpio out",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "pin": "13",
+        "set": true,
+        "level": "0",
+        "freq": "50",
+        "out": "out",
+        "bcm": true,
+        "x": 1700,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "ae82a1c5bb7d3e6d",
+        "type": "rpi-gpio out",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "pin": "12",
+        "set": true,
+        "level": "0",
+        "freq": "50",
+        "out": "out",
+        "bcm": true,
+        "x": 1700,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "62dfb1a74bfa4f4d",
+        "type": "switch",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "property": "payload.online",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "0",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "1",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "2",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "3",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "4",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "5",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "6",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "7",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "8",
+                "vt": "num"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 9,
+        "x": 870,
+        "y": 400,
+        "wires": [
+            [
+                "a87c17eba4319545"
+            ],
+            [
+                "33ee9097bb515849"
+            ],
+            [
+                "093fffbedbb8a83e"
+            ],
+            [
+                "ac4b969ab4d73d7f"
+            ],
+            [
+                "e326810209357298"
+            ],
+            [
+                "35ae1cc15d86b670"
+            ],
+            [
+                "e26582218a39836d"
+            ],
+            [
+                "4ac1b00b25d22e22"
+            ],
+            [
+                "fc29d3eda2000a56"
+            ]
+        ]
+    },
+    {
+        "id": "33ee9097bb515849",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "1",
+        "func": "msg.payload = 1\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1150,
+        "y": 220,
+        "wires": [
+            [
+                "275da38bfa0f8253",
+                "64dcd620247cb868"
+            ]
+        ]
+    },
+    {
+        "id": "093fffbedbb8a83e",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "1",
+        "func": "msg.payload = 1\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1150,
+        "y": 260,
+        "wires": [
+            [
+                "ea6a1c4b432bcefb",
+                "6eb7e2fb1f4eabec",
+                "64dcd620247cb868",
+                "6505675046971e7d"
+            ]
+        ]
+    },
+    {
+        "id": "ac4b969ab4d73d7f",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "1",
+        "func": "msg.payload = 1\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1150,
+        "y": 300,
+        "wires": [
+            [
+                "c25858c4053b7491",
+                "64dcd620247cb868",
+                "6505675046971e7d",
+                "6eb7e2fb1f4eabec"
+            ]
+        ]
+    },
+    {
+        "id": "e326810209357298",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "1",
+        "func": "msg.payload = 1\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1150,
+        "y": 340,
+        "wires": [
+            [
+                "43962a0cfdfac57d",
+                "64dcd620247cb868",
+                "6505675046971e7d",
+                "6eb7e2fb1f4eabec",
+                "1ceefbcbc074e9ed"
+            ]
+        ]
+    },
+    {
+        "id": "35ae1cc15d86b670",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "1",
+        "func": "msg.payload = 1\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1150,
+        "y": 380,
+        "wires": [
+            [
+                "93cc8fd0f4956d33",
+                "64dcd620247cb868",
+                "6505675046971e7d",
+                "6eb7e2fb1f4eabec",
+                "1ceefbcbc074e9ed",
+                "b75391e473702983"
+            ]
+        ]
+    },
+    {
+        "id": "e26582218a39836d",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "1",
+        "func": "msg.payload = 1\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1150,
+        "y": 420,
+        "wires": [
+            [
+                "81871b63cca9676c",
+                "083abb252192009b",
+                "b75391e473702983",
+                "1ceefbcbc074e9ed",
+                "6eb7e2fb1f4eabec",
+                "6505675046971e7d",
+                "64dcd620247cb868"
+            ]
+        ]
+    },
+    {
+        "id": "4ac1b00b25d22e22",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "1",
+        "func": "msg.payload = 1\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1150,
+        "y": 460,
+        "wires": [
+            [
+                "7b6d4e67eb8efe5f",
+                "43ae502a621f2819",
+                "083abb252192009b",
+                "b75391e473702983",
+                "1ceefbcbc074e9ed",
+                "6eb7e2fb1f4eabec",
+                "6505675046971e7d",
+                "64dcd620247cb868"
+            ]
+        ]
+    },
+    {
+        "id": "a87c17eba4319545",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "0",
+        "func": "msg.payload = 0\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1330,
+        "y": 220,
+        "wires": [
+            [
+                "64dcd620247cb868",
+                "6505675046971e7d",
+                "6eb7e2fb1f4eabec",
+                "1ceefbcbc074e9ed",
+                "b75391e473702983",
+                "083abb252192009b",
+                "ae82a1c5bb7d3e6d",
+                "43ae502a621f2819"
+            ]
+        ]
+    },
+    {
+        "id": "275da38bfa0f8253",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "0",
+        "func": "msg.payload = 0\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1330,
+        "y": 260,
+        "wires": [
+            [
+                "6505675046971e7d",
+                "6eb7e2fb1f4eabec",
+                "1ceefbcbc074e9ed",
+                "b75391e473702983",
+                "083abb252192009b",
+                "43ae502a621f2819",
+                "ae82a1c5bb7d3e6d"
+            ]
+        ]
+    },
+    {
+        "id": "ea6a1c4b432bcefb",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "0",
+        "func": "msg.payload = 0\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1330,
+        "y": 300,
+        "wires": [
+            [
+                "6eb7e2fb1f4eabec",
+                "1ceefbcbc074e9ed",
+                "b75391e473702983",
+                "083abb252192009b",
+                "43ae502a621f2819",
+                "ae82a1c5bb7d3e6d"
+            ]
+        ]
+    },
+    {
+        "id": "c25858c4053b7491",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "0",
+        "func": "msg.payload = 0\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1330,
+        "y": 340,
+        "wires": [
+            [
+                "b75391e473702983",
+                "083abb252192009b",
+                "43ae502a621f2819",
+                "ae82a1c5bb7d3e6d",
+                "1ceefbcbc074e9ed"
+            ]
+        ]
+    },
+    {
+        "id": "43962a0cfdfac57d",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "0",
+        "func": "msg.payload = 0\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1330,
+        "y": 380,
+        "wires": [
+            [
+                "b75391e473702983",
+                "083abb252192009b",
+                "43ae502a621f2819",
+                "ae82a1c5bb7d3e6d"
+            ]
+        ]
+    },
+    {
+        "id": "93cc8fd0f4956d33",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "0",
+        "func": "msg.payload = 0\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1330,
+        "y": 420,
+        "wires": [
+            [
+                "083abb252192009b",
+                "43ae502a621f2819",
+                "ae82a1c5bb7d3e6d"
+            ]
+        ]
+    },
+    {
+        "id": "81871b63cca9676c",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "0",
+        "func": "msg.payload = 0\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1330,
+        "y": 460,
+        "wires": [
+            [
+                "43ae502a621f2819",
+                "ae82a1c5bb7d3e6d"
+            ]
+        ]
+    },
+    {
+        "id": "fc29d3eda2000a56",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "1",
+        "func": "msg.payload = 1\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1150,
+        "y": 500,
+        "wires": [
+            [
+                "ae82a1c5bb7d3e6d",
+                "43ae502a621f2819",
+                "083abb252192009b",
+                "b75391e473702983",
+                "1ceefbcbc074e9ed",
+                "6eb7e2fb1f4eabec",
+                "6505675046971e7d",
+                "64dcd620247cb868"
+            ]
+        ]
+    },
+    {
+        "id": "7b6d4e67eb8efe5f",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "0",
+        "func": "msg.payload = 0\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1330,
+        "y": 500,
+        "wires": [
+            [
+                "ae82a1c5bb7d3e6d"
+            ]
+        ]
+    },
+    {
+        "id": "d0cef0f5d2dbd46d",
+        "type": "discordInteraction",
+        "z": "335a09e1e6361a9a",
+        "name": "Message Button",
+        "token": "",
+        "interactionType": "all",
+        "custom_id": "",
+        "commandResponse": "",
+        "interactionObject": true,
+        "ephemeral": false,
+        "responseType": "update",
+        "commandResponseType": "defersReply",
+        "x": 120,
+        "y": 600,
+        "wires": [
+            [
+                "3a3747c0f3f645f4"
+            ]
+        ]
+    },
+    {
+        "id": "3a3747c0f3f645f4",
+        "type": "switch",
+        "z": "335a09e1e6361a9a",
+        "name": "check for button",
+        "property": "payload.customId",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "regex",
+                "v": "stop_server",
+                "vt": "str",
+                "case": true
+            },
+            {
+                "t": "regex",
+                "v": "restart_server",
+                "vt": "str",
+                "case": true
+            },
+            {
+                "t": "regex",
+                "v": "start_server",
+                "vt": "str",
+                "case": true
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 3,
+        "x": 320,
+        "y": 600,
+        "wires": [
+            [
+                "f2c128016c6e413e"
+            ],
+            [
+                "cc7f944f52570eb3"
+            ],
+            [
+                "2700fa66b65e38c6"
+            ]
+        ]
+    },
+    {
+        "id": "f2c128016c6e413e",
+        "type": "http request",
+        "z": "335a09e1e6361a9a",
+        "name": "Renny stop",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "https://minecraft.lennygodart.org/api/v2/servers/a939a792-3942-4e4b-8ade-b09f9fc0695d/action/stop_server",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [
+            {
+                "keyType": "Authorization",
+                "keyValue": "",
+                "valueType": "other",
+                "valueValue": "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJpYXQiOjE3NDcxMzM3MjUsInRva2VuX2lkIjoxfQ.xAdOX-4KxSzgHWkBs4cM9v4NjeIg77gEiUzTrc3bx_Y"
+            }
+        ],
+        "x": 530,
+        "y": 560,
+        "wires": [
+            [
+                "1c5faa7d0c55836b"
+            ]
+        ]
+    },
+    {
+        "id": "1c5faa7d0c55836b",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "Format output",
+        "func": "// Prüfe ob die Payload ein String ist und parse sie wenn nötig\n// Abrufen der gespeicherten messageId aus dem Flow\nlet messageId = flow.get('messageId');\nlet data;\ntry {\n    data = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;\n} catch (error) {\n    msg.payload = \"❌ Fehler bei der Verarbeitung der Anfrage\";\n    return msg;\n}\n\n// Statusüberprüfung mit Discord-formatierter Nachricht\nif (data && data.status === \"ok\") {\n    msg.payload = \"✅ **Server-Status**: Der Server wurde erfolgreich gestoppt!\";\n} else {\n    msg.payload = \"❌ **Server-Status**: Operation fehlgeschlagen - Bitte überprüfe den Server\";\n}\nmsg.message = messageId;  // Vorhandene Message-ID verw\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 560,
+        "wires": [
+            [
+                "1cf3d898600d6491"
+            ]
+        ]
+    },
+    {
+        "id": "cc7f944f52570eb3",
+        "type": "http request",
+        "z": "335a09e1e6361a9a",
+        "name": "Renny restart",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "https://minecraft.lennygodart.org/api/v2/servers/a939a792-3942-4e4b-8ade-b09f9fc0695d/action/restart_server",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [
+            {
+                "keyType": "Authorization",
+                "keyValue": "",
+                "valueType": "other",
+                "valueValue": "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJpYXQiOjE3NDcxMzM3MjUsInRva2VuX2lkIjoxfQ.xAdOX-4KxSzgHWkBs4cM9v4NjeIg77gEiUzTrc3bx_Y"
+            }
+        ],
+        "x": 520,
+        "y": 600,
+        "wires": [
+            [
+                "35419d0fa326c769"
+            ]
+        ]
+    },
+    {
+        "id": "35419d0fa326c769",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "Format output",
+        "func": "// Prüfe ob die Payload ein String ist und parse sie wenn nötig\n// Abrufen der gespeicherten messageId aus dem Flow\nlet messageId = flow.get('messageId');\nlet data;\ntry {\n    data = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;\n} catch (error) {\n    msg.payload = \"❌ Fehler bei der Verarbeitung der Anfrage\";\n    return msg;\n}\n\n// Statusüberprüfung mit Discord-formatierter Nachricht\nif (data && data.status === \"ok\") {\n    msg.payload = \"✅ **Server-Status**: Der Server wurde erfolgreich neugestartet!\";\n} else {\n    msg.payload = \"❌ **Server-Status**: Operation fehlgeschlagen - Bitte überprüfe den Server\";\n}\nmsg.message = messageId;  // Vorhandene Message-ID verw\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 600,
+        "wires": [
+            [
+                "1cf3d898600d6491"
+            ]
+        ]
+    },
+    {
+        "id": "1cf3d898600d6491",
+        "type": "discordMessageManager",
+        "z": "335a09e1e6361a9a",
+        "name": "Send Status Message",
+        "channel": "1313469382696894536",
+        "token": "",
+        "x": 920,
+        "y": 600,
+        "wires": [
+            [
+                "80bf70ebe5d39a38"
+            ]
+        ]
+    },
+    {
+        "id": "24b207a9486a0513",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "Format output",
+        "func": "// Prüfe ob die Payload ein String ist und parse sie wenn nötig\n// Abrufen der gespeicherten messageId aus dem Flow\nlet messageId = flow.get('messageId');\nlet data;\ntry {\n    data = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;\n} catch (error) {\n    msg.payload = \"❌ Fehler bei der Verarbeitung der Anfrage\";\n    return msg;\n}\n\n// Statusüberprüfung mit Discord-formatierter Nachricht\nif (data && data.status === \"ok\") {\n    msg.payload = \"✅ **Server-Status**: Der Server wurde erfolgreich gestartet!\";\n} else {\n    msg.payload = \"❌ **Server-Status**: Operation fehlgeschlagen - Bitte überprüfe den Server\";\n}\nmsg.message = messageId;  // Vorhandene Message-ID verw\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 640,
+        "wires": [
+            [
+                "1cf3d898600d6491"
+            ]
+        ]
+    },
+    {
+        "id": "2700fa66b65e38c6",
+        "type": "http request",
+        "z": "335a09e1e6361a9a",
+        "name": "Renny start",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "https://minecraft.lennygodart.org/api/v2/servers/a939a792-3942-4e4b-8ade-b09f9fc0695d/action/start_server",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [
+            {
+                "keyType": "Authorization",
+                "keyValue": "",
+                "valueType": "other",
+                "valueValue": "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJpYXQiOjE3NDcxMzM3MjUsInRva2VuX2lkIjoxfQ.xAdOX-4KxSzgHWkBs4cM9v4NjeIg77gEiUzTrc3bx_Y"
+            }
+        ],
+        "x": 530,
+        "y": 640,
+        "wires": [
+            [
+                "24b207a9486a0513"
+            ]
+        ]
+    },
+    {
+        "id": "4d08979e72680426",
+        "type": "delay",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1320,
+        "y": 600,
+        "wires": [
+            [
+                "80e0807e17f9796a"
+            ]
+        ]
+    },
+    {
+        "id": "78a7fd921a7a41b7",
+        "type": "discordMessageManager",
+        "z": "335a09e1e6361a9a",
+        "name": "Delete Message",
+        "channel": "1313469382696894536",
+        "token": "",
+        "x": 1720,
+        "y": 600,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "80e0807e17f9796a",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "Retrieve MessageID",
+        "func": " // Abrufen der gespeicherten messageId aus dem Flow\nlet messageId = flow.get('messageId_1');\nnode.log(`Stored Message ID: ${messageId}`);  // Debugging: Überprüfen, ob die ID richtig abgerufen wird\n\nmsg.message = messageId;\nmsg.action = \"delete\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1520,
+        "y": 600,
+        "wires": [
+            [
+                "78a7fd921a7a41b7"
+            ]
+        ]
+    },
+    {
+        "id": "80bf70ebe5d39a38",
+        "type": "function",
+        "z": "335a09e1e6361a9a",
+        "name": "Store Message ID",
+        "func": "if (msg.action === 'create' && msg.payload && msg.payload.id) {\n    // Speichern der Message-ID\n    flow.set('messageId_1', msg.payload.id);\n    node.log(`Message ID saved: ${msg.payload.id}`);\n} else if (msg.action === 'edit') {\n    node.log('Message edited successfully.');\n} else {\n    node.warn('No message ID received to store.');\n}\nif (msg.payload && msg.payload.id) {\n    flow.set('messageId_1', msg.payload.id);\n    node.log(`Message ID saved: ${msg.payload.id}`);\n} else {\n    node.warn('No message ID found in payload.');\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1130,
+        "y": 600,
+        "wires": [
+            [
+                "4d08979e72680426"
+            ]
+        ]
+    },
+    {
+        "id": "d359d1f9bbb91934",
+        "type": "rpi-gpio in",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "pin": "19",
+        "intype": "tri",
+        "debounce": "25",
+        "read": false,
+        "bcm": true,
+        "x": 350,
+        "y": 640,
+        "wires": [
+            [
+                "2700fa66b65e38c6"
+            ]
+        ]
+    },
+    {
+        "id": "4df6b4ce55c3d30b",
+        "type": "rpi-gpio in",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "pin": "16",
+        "intype": "tri",
+        "debounce": "25",
+        "read": false,
+        "bcm": true,
+        "x": 350,
+        "y": 560,
+        "wires": [
+            [
+                "f2c128016c6e413e"
+            ]
+        ]
+    },
+    {
+        "id": "135fea4c96819f25",
+        "type": "rpi-gpio in",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "pin": "20",
+        "intype": "tri",
+        "debounce": "25",
+        "read": false,
+        "bcm": true,
+        "x": 90,
+        "y": 780,
+        "wires": [
+            [
+                "2ce6b4e41e9f096d"
+            ]
+        ]
+    },
+    {
+        "id": "524c258d384f64ec",
+        "type": "world",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "server": "47d518742c2b4590",
+        "action": "time",
+        "x": 610,
+        "y": 780,
+        "wires": [
+            [
+                "1cc3fee5d52ca846"
+            ]
+        ]
+    },
+    {
+        "id": "2ce6b4e41e9f096d",
+        "type": "switch",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "cont",
+                "v": "1",
+                "vt": "str"
+            },
+            {
+                "t": "cont",
+                "v": "0",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 210,
+        "y": 780,
+        "wires": [
+            [
+                "22cf02d6bef16876"
+            ],
+            [
+                "6a3a06fa28f2cf52"
+            ]
+        ]
+    },
+    {
+        "id": "22cf02d6bef16876",
+        "type": "change",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "action",
+                "pt": "msg",
+                "to": "time",
+                "tot": "str"
+            },
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "day",
+                "tot": "str"
+            },
+            {
+                "t": "delete",
+                "p": "topic",
+                "pt": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 390,
+        "y": 760,
+        "wires": [
+            [
+                "524c258d384f64ec",
+                "177643073ea361ce"
+            ]
+        ]
+    },
+    {
+        "id": "6a3a06fa28f2cf52",
+        "type": "change",
+        "z": "335a09e1e6361a9a",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "action",
+                "pt": "msg",
+                "to": "time",
+                "tot": "str"
+            },
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "night",
+                "tot": "str"
+            },
+            {
+                "t": "delete",
+                "p": "topic",
+                "pt": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 390,
+        "y": 800,
+        "wires": [
+            [
+                "524c258d384f64ec"
+            ]
+        ]
+    },
+    {
+        "id": "1cc3fee5d52ca846",
+        "type": "debug",
+        "z": "335a09e1e6361a9a",
+        "name": "debug 2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 780,
+        "y": 780,
+        "wires": []
+    },
+    {
+        "id": "177643073ea361ce",
+        "type": "debug",
+        "z": "335a09e1e6361a9a",
+        "name": "debug 3",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 680,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "47d518742c2b4590",
+        "type": "serverconfig",
+        "host": "ddns.lennygodart.org",
+        "rconPort": "25575",
+        "rconPassword": "13373000"
+    }
+]
