@@ -1,79 +1,79 @@
 # ProtoProjet-II.1
 
-A Node-RED based management system for controlling and monitoring a Minecraft server with both Discord integration and physical hardware controls.
+Ein Node-RED-basiertes Verwaltungssystem zur Steuerung und Überwachung eines Minecraft-Servers mit Discord-Integration und physischer Hardware-Steuerung.
 
-## Overview
+## Überblick
 
-Crafty_Bot is a comprehensive solution to manage a Minecraft server, providing:
+Crafty_Bot ist eine umfassende Lösung zur Verwaltung eines Minecraft-Servers mit folgenden Funktionen:
 
-- Real-time server status monitoring in Discord
-- Interactive Discord buttons for server control (start/stop/restart)
-- LCD display showing server information
-- LED indicators for player count
-- Physical buttons for server control
+- Echtzeit-Statusüberwachung des Servers in Discord
+- Interaktive Discord-Schaltflächen zur Serversteuerung (Start/Stopp/Neustart)
+- LCD-Display zur Anzeige von Serverinformationen
+- LED-Anzeigen für die Spieleranzahl
+- Physische Tasten zur Serversteuerung
 
-The system is built using Node-RED and runs on a Raspberry Pi, interfacing with a Minecraft server managed through Crafty Controller.
+Das System basiert auf Node-RED und läuft auf einem Raspberry Pi, der mit einem Minecraft-Server kommuniziert, der über Crafty Controller verwaltet wird.
 
-## Components
+## Komponenten
 
-### 1. Discord Interface (Crafty_Bot 01)
+### 1. Discord-Schnittstelle (Crafty_Bot 01)
 
-- Posts a server status embed message to a Discord channel
-- Updates status every 5 seconds with:
-  - Server name, IP and port
-  - Running state
-  - CPU and memory usage
-  - Player count and player list
-  - World name and version
-- Interactive buttons for:
-  - Starting the server when offline
-  - Stopping the server when online
-  - Restarting the server when online
+- Veröffentlicht eine Server-Status-Einbettungsnachricht in einem Discord-Kanal
+- Aktualisiert den Status alle 5 Sekunden mit:
+  - Servername, IP und Port
+  - Betriebszustand
+  - CPU- und Speichernutzung
+  - Spieleranzahl und Spielerliste
+  - Weltname und Version
+- Interaktive Schaltflächen für:
+  - Starten des Servers, wenn er offline ist
+  - Stoppen des Servers, wenn er online ist
+  - Neustarten des Servers, wenn er online ist
 
-### 2. Button Handler (Crafty_Bot 02)
+### 2. Tastenhandler (Crafty_Bot 02)
 
-- Processes button interactions from Discord
-- Sends API requests to Crafty Controller to control the server
-- Provides feedback messages about operation status
-- Has physical button integration via GPIO pins
+- Verarbeitet Tasteninteraktionen von Discord
+- Sendet API-Anfragen an Crafty Controller zur Steuerung des Servers
+- Bietet Feedback-Nachrichten über den Betriebsstatus
+- Verfügt über Integration physischer Tasten über GPIO-Pins
 
-### 3. Hardware Components
+### 3. Hardware-Komponenten
 
-- 16x2 LCD display showing:
-  - Server name (line 1)
-  - Server status and player count (line 2)
-- LED player count indicator (8 LEDs representing 0-8 players)
-- Physical control buttons for:
-  - Starting the server (GPIO pin 19)
-  - Stopping the server (GPIO pin 16)
-- LCD backlight toggle button (GPIO pin 21)
+- 16x2 LCD-Display mit Anzeige von:
+  - Servername (Zeile 1)
+  - Serverstatus und Spieleranzahl (Zeile 2)
+- LED-Spieleranzahlanzeige (8 LEDs für 0-8 Spieler)
+- Physische Steuertasten für:
+  - Starten des Servers (GPIO-Pin 19)
+  - Stoppen des Servers (GPIO-Pin 16)
+- LCD-Hintergrundbeleuchtungs-Umschalttaste (GPIO-Pin 21)
 
-## API Integration
+## API-Integration
 
-The system connects to a Minecraft server management API at `minecraft.lennygodart.org` using the following endpoints:
+Das System verbindet sich mit einer Minecraft-Server-Management-API unter `minecraft.lennygodart.org` und nutzt folgende Endpunkte:
 
-- `/api/v2/servers/{server-id}/stats` - Get server statistics
-- `/api/v2/servers/{server-id}/action/start_server` - Start server
-- `/api/v2/servers/{server-id}/action/stop_server` - Stop server
-- `/api/v2/servers/{server-id}/action/restart_server` - Restart server
+- `/api/v2/servers/{server-id}/stats` - Server-Statistiken abrufen
+- `/api/v2/servers/{server-id}/action/start_server` - Server starten
+- `/api/v2/servers/{server-id}/action/stop_server` - Server stoppen
+- `/api/v2/servers/{server-id}/action/restart_server` - Server neustarten
 
-## Setup Requirements
+## Einrichtungsanforderungen
 
-- Raspberry Pi with Node-RED installed
-- Discord bot token with proper permissions
-- Crafty Controller API token
-- 16x2 LCD display (I2C interface)
-- 8 LEDs connected to GPIO pins
-- 3 push buttons connected to GPIO pins
+- Raspberry Pi mit installiertem Node-RED
+- Discord-Bot-Token mit entsprechenden Berechtigungen
+- Crafty Controller API-Token
+- 16x2 LCD-Display (I2C-Schnittstelle)
+- 8 LEDs, angeschlossen an GPIO-Pins
+- 3 Drucktasten, angeschlossen an GPIO-Pins
 
-## GPIO Pin Mapping
+## GPIO-Pin-Belegung
 
-### Inputs
-- GPIO 16: Stop Server Button
-- GPIO 19: Start Server Button
-- GPIO 21: LCD Backlight Toggle Button
+### Eingänge
+- GPIO 16: Server-Stopp-Taste
+- GPIO 19: Server-Start-Taste
+- GPIO 21: LCD-Hintergrundbeleuchtungs-Umschalttaste
 
-### Outputs (LED Player Count)
+### Ausgänge (LED-Spieleranzahl)
 - GPIO 12: LED 8
 - GPIO 13: LED 7
 - GPIO 14: LED 6
@@ -83,30 +83,30 @@ The system connects to a Minecraft server management API at `minecraft.lennygoda
 - GPIO 18: LED 2
 - GPIO 27: LED 1
 
-## Python Scripts
+## Python-Skripte
 
-The system calls the following Python scripts for LCD control:
-- `/home/lenny/digilab/lcd/init.py` - Initialize and clear the LCD
-- `/home/lenny/digilab/lcd/backlight.py` - Control LCD backlight
-- `/home/lenny/digilab/lcd/write.py` - Write text to LCD screen
+Das System ruft folgende Python-Skripte zur LCD-Steuerung auf:
+- `/home/lenny/digilab/lcd/init.py` - LCD initialisieren und löschen
+- `/home/lenny/digilab/lcd/backlight.py` - LCD-Hintergrundbeleuchtung steuern
+- `/home/lenny/digilab/lcd/write.py` - Text auf LCD-Bildschirm schreiben
 
 ## Installation
 
-1. Import the Node-RED flows into your Node-RED instance
-2. Configure Discord credentials in the Discord nodes
-3. Update the API token in the HTTP request nodes
-4. Connect the hardware components to the appropriate GPIO pins
-5. Ensure Python LCD scripts are in place
-6. Deploy the flows
+1. Importieren Sie die Node-RED-Flows in Ihre Node-RED-Instanz
+2. Konfigurieren Sie Discord-Anmeldedaten in den Discord-Knoten
+3. Aktualisieren Sie das API-Token in den HTTP-Anforderungsknoten
+4. Verbinden Sie die Hardware-Komponenten mit den entsprechenden GPIO-Pins
+5. Stellen Sie sicher, dass die Python-LCD-Skripte vorhanden sind
+6. Stellen Sie die Flows bereit
 
 ## Flows
 
 ### Crafty_Bot 01
-Handles server status monitoring, Discord status updates, LCD display, and LED indicators.
+Verwaltet die Server-Statusüberwachung, Discord-Statusaktualisierungen, LCD-Anzeige und LED-Anzeigen.
 
 ### Crafty_Bot 02
-Manages button interactions from Discord and physical buttons.
+Verwaltet Tasteninteraktionen von Discord und physischen Tasten.
 
-## Security Note
+## Sicherheitshinweis
 
-The API tokens in the flow files should be replaced with your own tokens before deploying.
+Die API-Tokens in den Flow-Dateien sollten vor der Bereitstellung durch Ihre eigenen Tokens ersetzt werden.
