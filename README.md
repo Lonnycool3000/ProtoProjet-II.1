@@ -102,10 +102,7 @@ Das System ruft folgende Python-Skripte zur LCD-Steuerung auf:
 ## Flows
 
 ### Crafty_Bot 01
-Verwaltet die Server-Statusüberwachung, Discord-Statusaktualisierungen, LCD-Anzeige und LED-Anzeigen.
-
-### Crafty_Bot 02
-Verwaltet Tasteninteraktionen von Discord und physischen Tasten.
+Verwaltet die Server-Statusüberwachung, Discord-Statusaktualisierungen, Tasteninteraktionen von Discord und physischen Tasten, LCD-Anzeige und LED-Anzeigen.
 
 ## Sicherheitshinweis
 
