@@ -4,7 +4,7 @@ Ein Node-RED-basiertes Verwaltungssystem zur Steuerung und Überwachung eines Mi
 
 ## Überblick
 
-Crafty_Bot ist eine umfassende Lösung zur Verwaltung eines Minecraft-Servers mit folgenden Funktionen:
+Proto_Projet ist eine Lösung zur Verwaltung eines Minecraft-Servers mit folgenden Funktionen:
 
 - Echtzeit-Statusüberwachung des Servers in Discord
 - Interaktive Discord-Schaltflächen zur Serversteuerung (Start/Stopp/Neustart)
@@ -97,11 +97,11 @@ Das System ruft folgende Python-Skripte zur LCD-Steuerung auf:
 3. Aktualisieren Sie das API-Token in den HTTP-Anforderungsknoten
 4. Verbinden Sie die Hardware-Komponenten mit den entsprechenden GPIO-Pins
 5. Stellen Sie sicher, dass die Python-LCD-Skripte vorhanden sind
-6. Stellen Sie die Flows bereit
+6. Stellen Sie den Flow bereit
 
 ## Flows
 
-### Crafty_Bot 01
+### ProtoProjet
 Verwaltet die Server-Statusüberwachung, Discord-Statusaktualisierungen, Tasteninteraktionen von Discord und physischen Tasten, LCD-Anzeige und LED-Anzeigen.
 
 ## Sicherheitshinweis
