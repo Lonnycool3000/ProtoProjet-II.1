@@ -16,7 +16,7 @@ Das System basiert auf Node-RED und läuft auf einem Raspberry Pi, der mit einem
 
 ## Komponenten
 
-### 1. Discord-Schnittstelle (Crafty_Bot 01)
+### 1. Discord-Schnittstelle
 
 - Veröffentlicht eine Server-Status-Einbettungsnachricht in einem Discord-Kanal
 - Aktualisiert den Status alle 5 Sekunden mit:
@@ -30,7 +30,7 @@ Das System basiert auf Node-RED und läuft auf einem Raspberry Pi, der mit einem
   - Stoppen des Servers, wenn er online ist
   - Neustarten des Servers, wenn er online ist
 
-### 2. Tastenhandler (Crafty_Bot 02)
+### 2. Tastenhandler
 
 - Verarbeitet Tasteninteraktionen von Discord
 - Sendet API-Anfragen an Crafty Controller zur Steuerung des Servers
